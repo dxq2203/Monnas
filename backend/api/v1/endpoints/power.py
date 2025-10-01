@@ -1,15 +1,15 @@
 from fastapi import FastAPI, APIRouter, Query, HTTPException
 from fastapi.responses import JSONResponse
 from utils.app_exceptions import AppExceptionCase
-from services.power import fetch_hourly_power_data
+from services.power import fetch_daily_power_data
 import requests
 
 app = FastAPI()
 
 router = APIRouter(prefix="/power", tags=["NASA POWER API"])
 
-@router.get("/api/temporal/hourly/point")
-async def proxy_nasa_power_hourly_point(
+@router.get("/api/temporal/daily/point")
+async def proxy_nasa_power_daily_point(
     start: int = Query(..., description="Start date in YYYYMMDD format"),
     end: int = Query(..., description="End date in YYYYMMDD format"),
     longitude: float = Query(..., description="Longitude of the point"),
@@ -21,14 +21,14 @@ async def proxy_nasa_power_hourly_point(
     time_standard: str = Query("lst", alias="time-standard", description="Time standard: lst or utc")
 ):
     """
-    Proxy endpoint to NASA POWER API hourly point service.
+    Proxy endpoint to NASA POWER API daily point service.
     It constructs a request like:
 
-    https://power.larc.nasa.gov/api/temporal/hourly/point
+    https://power.larc.nasa.gov/api/temporal/daily/point
     """
 
     try:
-        return fetch_hourly_power_data(
+        return fetch_daily_power_data(
             start=start,
             end=end,
             longitude=longitude,

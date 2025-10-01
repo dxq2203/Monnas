@@ -1,9 +1,9 @@
 import requests
 from utils.app_exceptions import AppException
 
-NASA_POWER_API = "https://power.larc.nasa.gov/api/temporal/hourly/point"
+NASA_POWER_API = "https://power.larc.nasa.gov/api/temporal/daily/point"
 
-def fetch_hourly_power_data(
+def fetch_daily_power_data(
     start: int,
     end: int,
     longitude: float,
