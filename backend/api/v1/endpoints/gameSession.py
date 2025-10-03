@@ -1,12 +1,11 @@
-from fastapi import FastAPI, APIRouter, Query, HTTPException, Depends
-from fastapi.responses import JSONResponse
-from utils.app_exceptions import AppExceptionCase
-import requests
-
-from db.db import get_database
-from schemas.gameSession import GameSessionCreate, GameSessionInDB, GameSessionList
-from services import gameSession as service_game_session
+from fastapi import APIRouter, Depends
+# from db.db import get_database
+from db.db import get_db as get_database
+from schemas.gameSession import GameSessionCreate, GameSessionInDB, GameSessionList, GameSession, StageSnapshotCreate
+from services.gameSession import GameSessionService
 from pymongo.database import Database
+from typing import List
+from fastapi import HTTPException, status
 
 router = APIRouter(
     prefix="/game-sessions",
@@ -16,19 +15,54 @@ router = APIRouter(
 @router.post("/", response_model=GameSessionInDB, status_code=201)
 def create_game_session(
     game_session: GameSessionCreate,
-    db: Database = Depends(get_database)
+    db: get_database = Depends()
 ):
     """
     Create a new game session.
     """
-    return service_game_session.create_game_session(db=db, game_session=game_session)
+    return GameSessionService(db).create_game_session(game_session=game_session)
 
 @router.get("/", response_model=GameSessionList)
 def read_game_sessions(
-    db: Database = Depends(get_database)
+    db: get_database = Depends()
 ):
     """
     Retrieve all game sessions.
     """
-    sessions = service_game_session.get_all_game_sessions(db=db)
+    sessions = GameSessionService(db).get_all_game_sessions()
     return {"game_sessions": sessions}
+
+@router.post("/{session_id}/history", response_model=GameSession, status_code=status.HTTP_201_CREATED)
+def add_new_turn_to_session(
+    session_id: str,
+    turn: StageSnapshotCreate,
+    db: get_database = Depends()
+):
+    """
+    Thêm một lượt chơi (turn) mới vào lịch sử của một game session.
+    """
+    return GameSessionService(db).add_turn(session_id, turn)
+
+@router.patch("/{session_id}/history/{turn_number}", response_model=GameSession)
+def update_existing_turn(
+    session_id: str,
+    turn_number: int,
+    turn_update: dict, # Nhận một dict linh hoạt
+    db: get_database = Depends()
+):
+    """
+    Cập nhật một lượt chơi đã có trong lịch sử.
+    Lưu ý: Chỉ gửi những trường cần thay đổi, ví dụ: { "stage_name": "Làm đòng" }
+    """
+    return GameSessionService(db).update_turn(session_id, turn_number, turn_update)
+
+@router.delete("/{session_id}/history/{turn_number}", response_model=GameSession)
+def remove_turn_from_session(
+    session_id: str,
+    turn_number: int,
+    db: get_database = Depends()
+):
+    """
+    Xóa một lượt chơi khỏi lịch sử của một game session.
+    """
+    return GameSessionService(db).remove_turn(session_id, turn_number)
