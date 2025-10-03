@@ -77,13 +77,13 @@ class GameSession(BaseModel):
 
     class Config:
         """ Pydantic configuration. """
-        allow_population_by_field_name = True
+        validate_by_name = True
         arbitrary_types_allowed = True # Needed for PyObjectId
         json_encoders = {
             datetime: lambda dt: dt.isoformat(),
             ObjectId: str
         }
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "_id": "64f8e...",
                 "player_name": "Pro Farmer",
