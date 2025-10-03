@@ -15,7 +15,7 @@ GAME_CONFIG = {
         "dong-xuan": {
             "name": "Vụ Đông-Xuân",
             "start_date": "20231101",
-            "end_date": "20240229"
+            "end_date": "20240229",
         },
         "he-thu": {
             "name": "Vụ Hè-Thu",

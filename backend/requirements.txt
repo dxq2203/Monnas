@@ -1,4 +1,6 @@
-fastapi[stardard]
+fastapi
 uvicorn
 python-dotenv
 requests
+pymongo[srv]==3.12
+sqlalchemy
