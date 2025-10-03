@@ -1,1 +1,1 @@
-from .schema import GameSession, PlayerAction, TurnResult, TurnSnapshot, CumulativeState
+from .schema import GameSession, PlayerAction, StageResult, StageSnapshot, CumulativeState

@@ -12,24 +12,6 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 from bson import ObjectId
 
-# --- Helper Schemas ---
-
-class PyObjectId(ObjectId):
-    """ Custom Pydantic type for MongoDB's ObjectId. """
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-
-    @classmethod
-    def validate(cls, v):
-        if not ObjectId.is_valid(v):
-            raise ValueError("Invalid ObjectId")
-        return ObjectId(v)
-
-    @classmethod
-    def __modify_schema__(cls, field_schema):
-        field_schema.update(type="string")
-
 
 class PlayerAction(BaseModel):
     """
@@ -45,18 +27,17 @@ class StageResult(BaseModel):
     Represents the calculated outcomes of a single stage.
     Mô tả kết quả được tính toán của một giai đoạn. Các giá trị này là *phát sinh trong giai đoạn*.
     """
-    ch4_emitted: float = Field(..., description="Methane (CH4) emitted in this stage (kg).")
-    n2o_emitted: float = Field(..., description="Nitrous Oxide (N2O) emitted in this stage (kg).")
-    biomass_growth: float = Field(..., description="Biomass gained in this stage (kg/ha).")
+    ch4_emission: float = Field(..., description="Methane (CH4) emitted in this stage (kg).")
+    n2o_emission: float = Field(..., description="Nitrous Oxide (N2O) emitted in this stage (kg).")
 
 class CumulativeState(BaseModel):
     """
     Represents the cumulative state of the game up to the end of a stage.
     Mô tả trạng thái tích lũy của game tính đến cuối một lượt.
     """
-    cumualative_ch4_emission: float = Field(..., description="Total CH4 emission so far (kg).")
+    cumulative_ch4_emission: float = Field(..., description="Total CH4 emission so far (kg).")
     cumulative_n2o_emission: float = Field(..., description="Total N2O emission so far (kg).")
-    cumulative_biomass: float = Field(..., description="Total biomass accumulated so far (kg/ha).")
+    cumulative_emission: float = Field(..., description="Total GHG emission so far (kg CO2e).")
 
 class StageSnapshot(BaseModel):
     """
@@ -79,7 +60,7 @@ class GameSession(BaseModel):
     This is the main document that will be stored in the MongoDB collection.
     Mô tả toàn bộ một ván chơi. Đây là document chính sẽ được lưu trong collection của MongoDB.
     """
-    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    id: str = Field(..., alias="_id")
     player_name: str = Field(default="Anonymous", description="Player's name (optional).")
     
     start_time: datetime = Field(default_factory=datetime.utcnow, description="Timestamp when the game started.")

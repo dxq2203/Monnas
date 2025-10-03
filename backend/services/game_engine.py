@@ -1,9 +1,10 @@
 from .power import fetch_daily_power_data
 from ..config import GAME_CONFIG
-from ..models import GameSession, PlayerAction, TurnResult, TurnSnapshot, CumulativeState
+from ..models import GameSession, PlayerAction, StageResult, StageSnapshot, CumulativeState
 import os
 import json
 import math
+from datetime import datetime 
 
 # This game has 2 types of parameters:
 # 1. Static parameters: These parameters are fixed and do not change during the game. They include:
@@ -49,21 +50,60 @@ class GameEngine:
         self.seasons = GAME_CONFIG['seasons']
         self.current_stage = len(session.game_history) + 1
 
+    def _calculate_sf_w(self, season_key, water_regime, weather_data):
+        """
+        Calculate scaling factor for water regime (SF_w)
+
+        Args:
+            season_key (str): The key for the chosen season, e.g., 'dong-xuan'.
+            water_regime (str): The water regime chosen by the player, e.g., 'traditional technique', 'AWD', 'Regular rainfed'.
+
+        Returns:
+            float: Scaling factor for water regime (SF_w)
+        """
+
+        # Default value
+        SF_w = 0.0 
+
+        a_0 = {}
+        a_1 = {}
+        a_2 = {}
+        a_3 = {}
+        a_4 = {}
+        F = {}
+
+        SF_w = a_0 + a_1 * weather_data[season_key]['avg_temp'] + a_2 * weather_data[season_key]['total_rainfall'] + a_3 * weather_data[season_key]['avg_humidity'] + a_4 * F         
+
+        SF_w = math.exp(SF_w)
+
+        return SF_w
+
     def _calculate_sf_o(self, organic_fertilizer_types):
         """
         Calculate scaling factor for organic amendments (SF_o)
 
         Args:
             organic_fertilizer_types (dict): Dictionary of organic fertilizer types and their amounts
+
+            There are 5 types of organic fertilizers:
+                - Type 1: Straw incorporated shortly before cultivation
+                - Type 2: Straw incorporated long before cultivation
+                - Type 3: Compost 
+                - Type 4: Farm yard manure
+                - Type 5: Green manure 
+        Returns:
+            float: Scaling factor for organic amendments (SF_o)
         """
         # Default value
         SF_o = 1.0
 
-        # Mapping of organic fertilizer types to their respective scaling factors
+        # Mapping of organic fertilizer types to their respective conversion factors (CFOA)
         sf_o_mapping = {
-            "type1": 1.0,
-            "type2": 0.8,
-            "type3": 0.6
+            "Straw_short": 1.00,
+            "Straw_long": 0.19,
+            "Compost": 0.17,
+            "Farm_yard_manure": 0.21,
+            "Green_manure": 0.45,
         }
 
         for fert_type, fert_amount in organic_fertilizer_types.items():
@@ -72,11 +112,8 @@ class GameEngine:
                 SF_o += SF_o_i ** 0.59
 
         return SF_o 
-    
-    def _calculate_sf_w(self):
-        pass 
 
-    def _calculate_ch4_emission(self, organic_fertilizer_types, time, area):
+    def _calculate_ch4_emission(self, season_key, weather_data, water_regime, organic_fertilizer_types, time, area):
         """
         Calculate CH4 emission for rice based on IPCC formula (kg CH4/ha)
 
@@ -86,16 +123,20 @@ class GameEngine:
         """
 
         # Emission factor baseline for continuously flooded rice fields without organic at Southeast Asia
-        EF_c = 1.22 # kg CH4/ha/day
+        EF_c = {
+            "dong_xuan": 1.95,
+            "he_thu": 1.83,
+            "thu_dong": 2.20,
+        } # kg CH4/ha/day
 
         # Scaling factor for water regime during cultivation period
-        SF_w = self.calculate_sf_w()
+        SF_w = self._calculate_sf_w(season_key, water_regime, weather_data)
 
         # Scaling factor for water regime pre-cultivation period
         SF_p = 1.0 # any default value
 
         # Scaling factor for organic amendments
-        SF_o = self.calculate_sf_o(organic_fertilizer_types)
+        SF_o = self._calculate_sf_o(organic_fertilizer_types)
 
         # Scaling factor for soil type
         SF_s = 1.0 # default value
@@ -107,6 +148,50 @@ class GameEngine:
         
         return ch4_emission
     
+    def _calculate_n2o_emission(self, season_key, synthetic_fertilizer_types):
+        """
+        Calculate N2O emission for rice based on IPCC formula (kg N2O/ha)
+
+        Args:
+            synthetic_fertilizer_types (dict): Dictionary of synthetic fertilizer types and their amounts
+        
+        Returns:
+            float: N2O emission for rice (kg N2O/ha)
+        """
+
+        F_SN = {
+            "Urea": 0.46,
+            "Diammonium_phosphate": 0.18,
+            "Ammonium_sulphate": 0.21,
+            "Ammonium_chloride": 0.25,
+            "Ammonium_nitrate": 0.35,
+            "Lân": 0,
+            "Kali": 0,
+            "NPK_de_nhanh": 0.2,
+            "NPK_lam_rong": 0.15,
+        }
+
+        EF_1i = {
+            "dong_xuan": 0.15,
+            "he_thu": 0.2,
+            "thu_dong": 0.17,
+        }
+
+        F_CR = 20 # kg/ha - mock data 
+
+        EF_1 = 0.01 
+
+        n2o_emission = 0.0
+
+        for fert_type, fert_amount in synthetic_fertilizer_types.items():
+            if fert_type in F_SN:
+                F_sn_i = fert_amount * F_SN[fert_type]
+                n2o_emission += F_sn_i
+
+        n2o_emission = n2o_emission * EF_1i[season_key] + F_CR * EF_1
+
+        return n2o_emission
+    
     def _get_current_stage_name(self, current_stage_num: int) -> str:
         return self.stages[current_stage_num]
     
@@ -115,12 +200,45 @@ class GameEngine:
         if not self.session.game_history:
             return CumulativeState(
                 cumualative_ch4_emission=0.0,
-                cumulative_n2o_emission=0.0,
-                cumulative_biomass=0.0
+                cumulative_n2o_emission=0.0
             )
         
         # Other stages (2nd, 3rd, ...)
         return self.session.game_history[-1].cumulative_state
+    
+    def _calculate_stage_result(self, player_action: PlayerAction, weather_data: dict, prev_state: CumulativeState) -> StageResult:
+        """
+        Calculate the results of a single stage based on player actions and weather data.
+
+        Args:
+            player_action (PlayerAction): The actions taken by the player in this stage.
+            weather_data (dict): The weather data for this stage.
+            prev_state (CumulativeState): The cumulative state from the previous stage.
+        
+        Returns:
+            StageResult: The calculated results for this stage.
+        """ 
+        # Mock-up calculations for demonstration purposes
+        # this information will be extracted from player_action and weather_data in a real implementation
+        organic_fertilizer_types={ 
+            "Straw_short": 50,
+            "Compost": 36
+        }
+
+        time = 32 # days
+
+        area = 2.5 # hectares
+
+        curr_stage_ch4_emission = self._calculate_ch4_emission(
+            organic_fertilizer_types, time, area, weather_data 
+        )
+
+        curr_stage_n2o_emission = 36 
+
+        return StageResult(
+            ch4_emission = curr_stage_ch4_emission,
+            n2o_emission = curr_stage_n2o_emission
+        )
     
     def play_turn(self, player_actions: PlayerAction, weather_data: dict) -> GameSession:
         """
@@ -137,5 +255,42 @@ class GameEngine:
         if self.session.status != "in_progress":
             raise GameEngineError(f'Game is not in progress. Current status: {self.session.status}')
         
-        if self.current_turn > self.total_turns:
-            raise GameEngineError(f'All turns have been played. Total turns: {self.total_turns}')
+        if self.current_stage > self.total_stages:
+            raise GameEngineError(f'All stages have been played. Total turns: {self.total_stages}')
+        
+        previous_state = self._get_previous_cumulative_state()
+
+        # --- Calculate stage results --- 
+        curr_stage_result = self._calculate_stage_result(player_actions, weather_data, previous_state)
+
+        # --- Update cumulative state ---
+        curr_stage_total_emission = curr_stage_result.ch4_emission * 27 + curr_stage_result.n2o_emission * 273 # kg CO2e
+        new_cumulative_state = CumulativeState(
+            cumulative_ch4_emission= previous_state.cumulative_ch4_emission + curr_stage_result.ch4_emission,
+            cumulative_n2o_emission= previous_state.cumulative_n2o_emission + curr_stage_result.n2o_emission,
+            cumulative_emission= previous_state.cumulative_emission + curr_stage_total_emission
+        )
+
+        # --- Create stage snapshot ---
+        curr_stage_snapshot = StageSnapshot(
+            stage_number = self.current_stage,
+            stage_name = self._get_current_stage_name(self.current_stage),
+            player_action = player_actions,
+            weather_conditions = weather_data,
+            stage_result = curr_stage_result,
+            cumulative_state = new_cumulative_state
+        )
+
+        # --- Update game session ---
+        self.session.game_history.append(curr_stage_snapshot)
+
+        # If this was the last stage, finalize the game
+        if self.current_stage == self.total_stages:
+            self.session.status = "completed"
+            self.session.end_time = datetime.utcnow()
+
+            self.session.final_metrics = {
+                "final_net_emission": new_cumulative_state.cumulative_emission
+            }
+
+        return self.session 
