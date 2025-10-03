@@ -4,12 +4,12 @@ GAME_CONFIG = {
         "longitude": 105.86227561323018,
         "latitude": 10.535512374246121
     }, 
-    "total_turns": 16,
+    "total_stages": 4,
     "stages": {
-        "Gieo mạ": {"start_turn": 1, "end_turn": 4},
-        "Đẻ nhánh": {"start_turn": 5, "end_turn": 8},
-        "Làm đòng": {"start_turn": 9, "end_turn": 12},
-        "Vào chắc": {"start_turn": 13, "end_turn": 16}
+        1: "Gieo mạ",
+        2: "Đẻ nhánh",
+        3: "Làm đòng - trổ",
+        4: "Ngậm sữa - chín"
     },
     "seasons": {
         "dong-xuan": {
