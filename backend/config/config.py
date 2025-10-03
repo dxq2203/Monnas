@@ -14,7 +14,7 @@ GAME_CONFIG = {
     "seasons": {
         "dong-xuan": {
             "name": "Vụ Đông-Xuân",
-            "start_date": "20231101",
+            "start_date": "20231101", 
             "end_date": "20240220"
         },
         "he-thu": {
