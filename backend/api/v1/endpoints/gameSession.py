@@ -29,6 +29,7 @@ def read_game_sessions(
     """
     Retrieve all game sessions.
     """
+    import pdb; pdb.set_trace()
     sessions = GameSessionService(db).get_all_game_sessions()
     return {"game_sessions": sessions}
 

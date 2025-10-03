@@ -24,7 +24,7 @@ class GameSessionCRUD(AppCRUD):
 
     def get_all_game_sessions(self) -> List[GameSessionInDB]:
         COLLECTION_NAME = GameSessionModel.Config.collection_name
-        sessions = self.db[COLLECTION_NAME].find()
+        sessions = list(self.db[COLLECTION_NAME].find())
         for session in sessions:
             print("crud session", session)
         return [GameSessionInDB(**session) for session in sessions]
