@@ -50,7 +50,7 @@ class GameEngine:
         self.seasons = GAME_CONFIG['seasons']
         self.current_stage = len(session.game_history) + 1
 
-    def _calculate_sf_w(self, season_key, water_regime, weather_data):
+    def _calculate_sf_w(self, season_key, water_regime, weather_data, stage_num):
         """
         Calculate scaling factor for water regime (SF_w)
 
@@ -63,18 +63,123 @@ class GameEngine:
         """
 
         # Default value
-        SF_w = 0.0 
+        SF_w = 1.0 
 
-        a_0 = {}
-        a_1 = {}
-        a_2 = {}
-        a_3 = {}
-        a_4 = {}
-        F = {}
+        a = {
+            1: {
+                'traditional_technique': 0.458694426,
+                'AWD': 0.230519965,
+                'regular_rainfed': 0.504341353,
+            },
+            2: {
+                'traditional_technique': 0.970718789,
+                'AWD': 0.411157427,
+                'regular_rainfed': 0.296820827,
+            },
+            3: {
+                'traditional_technique': 0.562444389,
+                'AWD': 0.335273617,
+                'regular_rainfed': 0.44668872,
+            },
+            4: {
+                'traditional_technique': 1.120955286,
+                'AWD': 0.436334021,
+                'regular_rainfed': 1.22391098,
+            }
+        }
+        b = {
+            1: {
+                'traditional_technique': 0.043251497,
+                'AWD': 0.052121708,
+                'regular_rainfed': 0.023009281,
+            },
+            2: {
+                'traditional_technique': 3.08017e-07,
+                'AWD': 0.036009981,
+                'regular_rainfed': 0.048356805,
+            },
+            3: {
+                'traditional_technique': 0.032842182,
+                'AWD': 0.04353807,
+                'regular_rainfed': 0.034148876,
+            },
+            4: {
+                'traditional_technique': 2.23181E-14,
+                'AWD': 0.037913224,
+                'regular_rainfed': 2.25066E-14,
+            }
+        }
+        c = {
+            1: {
+                'traditional_technique': 0.002195157,
+                'AWD': 0.001862591,
+                'regular_rainfed': 0.002453813,
+            },
+            2: {
+                'traditional_technique': 2.22064E-14,
+                'AWD': 2.26313E-14,
+                'regular_rainfed': 2.28332E-14,
+            },
+            3: {
+                'traditional_technique': 0.022408331,
+                'AWD': 0.011566927,
+                'regular_rainfed': 0.013843375,
+            },
+            4: {
+                'traditional_technique': 0.007893869,
+                'AWD': 0.009102005,
+                'regular_rainfed': 0.008256156,
+            }
+        }
+        d = {
+            1: {
+                'traditional_technique': 0.128416648,
+                'AWD': 0.090983292,
+                'regular_rainfed': 0.105923764,
+            },
+            2: {
+                'traditional_technique': 0.129716815,
+                'AWD': 0.724674735,
+                'regular_rainfed': 2.614438373,
+            },
+            3: {
+                'traditional_technique': 0.032354655,
+                'AWD': 0.082440357,
+                'regular_rainfed': 0.24326874,
+            },
+            4: {
+                'traditional_technique': 0.794350362,
+                'AWD': 0.107006198,
+                'regular_rainfed': 0.399764521,
+            }
+        }
+        e = {
+            1: {
+                'traditional_technique': 3.61328E-05,
+                'AWD': 3.67026E-06,
+                'regular_rainfed': 0.050536831,
+            },
+            2: {
+                'traditional_technique': 0.370910015,
+                'AWD': 2.22045E-14,
+                'regular_rainfed': 0.031503649,
+            },
+            3: {
+                'traditional_technique': 0.146150479,
+                'AWD': 4.8745E-06,
+                'regular_rainfed': 0.044627836,
+            },
+            4: {
+                'traditional_technique': 0.423227968,
+                'AWD': 3.53414E-05,
+                'regular_rainfed': 0.166725189,
+            }
+        }
 
-        SF_w = a_0 + a_1 * weather_data[season_key]['avg_temp'] + a_2 * weather_data[season_key]['total_rainfall'] + a_3 * weather_data[season_key]['avg_humidity'] + a_4 * F         
+        # mock data 
+        F = 5 # in range 0-15
 
-        SF_w = math.exp(SF_w)
+        SF_w = a[stage_num][water_regime] * math.exp(b[stage_num][water_regime] * weather_data['avg_temp']) * (1 + c[stage_num][water_regime] * weather_data['total_rainfall']) * (1 / (1 + math.exp(-d[stage_num][water_regime] * weather_data['avg_humidity']))) * (1 / (1 + math.exp(-e[stage_num][water_regime] * F)))         
 
         return SF_w
 
@@ -113,13 +218,13 @@ class GameEngine:
 
         return SF_o 
 
-    def _calculate_ch4_emission(self, season_key, weather_data, water_regime, organic_fertilizer_types, time, area):
+    def _calculate_ch4_emission(self, season_key, weather_data, water_regime, organic_fertilizer_types, time, area = 1.0):
         """
         Calculate CH4 emission for rice based on IPCC formula (kg CH4/ha)
 
         Args:
-            time (int): Growth period in days (typically 120 days for rice)
-            area (float): Area in hectares
+            time (int): Growth period in days (typically 120 days for rice), default is 120 days
+            area (float): Area in hectares, default is 1.0 hectares 
         """
 
         # Emission factor baseline for continuously flooded rice fields without organic at Southeast Asia
