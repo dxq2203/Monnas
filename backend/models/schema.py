@@ -12,61 +12,44 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 from bson import ObjectId
 
-# --- Helper Schemas ---
-
-class PyObjectId(ObjectId):
-    """ Custom Pydantic type for MongoDB's ObjectId. """
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-
-    @classmethod
-    def validate(cls, v):
-        if not ObjectId.is_valid(v):
-            raise ValueError("Invalid ObjectId")
-        return ObjectId(v)
-
-    @classmethod
-    def __modify_schema__(cls, field_schema):
-        field_schema.update(type="string")
-
 
 class PlayerAction(BaseModel):
     """
-    Represents a single action taken by the player in a turn.
-    Mô tả một hành động duy nhất mà người chơi thực hiện trong một lượt.
+    Represents a single action taken by the player in a stage.
+    Mô tả một hành động duy nhất mà người chơi thực hiện trong một giai đoạn.
     """
     action_type: str = Field(..., description="The type of action, e.g., 'BÓN PHÂN', 'TƯỚI NƯỚC'.")
     params: Dict[str, Any] = Field(..., description="Parameters for the action, e.g., {'fertilizerType': 'urea', 'amountKg': 100}.")
 
 
-class TurnResult(BaseModel):
+class StageResult(BaseModel):
     """
-    Represents the calculated outcomes of a single turn.
-    Mô tả kết quả được tính toán của một lượt chơi. Các giá trị này là *phát sinh trong lượt*.
+    Represents the calculated outcomes of a single stage.
+    Mô tả kết quả được tính toán của một giai đoạn. Các giá trị này là *phát sinh trong giai đoạn*.
     """
-    ch4_emitted: float = Field(..., description="Methane (CH4) emitted in this turn (kg).")
-    n2o_emitted: float = Field(..., description="Nitrous Oxide (N2O) emitted in this turn (kg).")
-    biomass_growth: float = Field(..., description="Biomass gained in this turn (kg/ha).")
+    ch4_emission: float = Field(..., description="Methane (CH4) emitted in this stage (kg).")
+    n2o_emission: float = Field(..., description="Nitrous Oxide (N2O) emitted in this stage (kg).")
 
 class CumulativeState(BaseModel):
     """
-    Represents the cumulative state of the game up to the end of a turn.
+    Represents the cumulative state of the game up to the end of a stage.
     Mô tả trạng thái tích lũy của game tính đến cuối một lượt.
     """
-    cumulative_biomass: float = Field(..., description="Total biomass accumulated so far (kg/ha).")
+    cumulative_ch4_emission: float = Field(..., description="Total CH4 emission so far (kg).")
+    cumulative_n2o_emission: float = Field(..., description="Total N2O emission so far (kg).")
+    cumulative_emission: float = Field(..., description="Total GHG emission so far (kg CO2e).")
 
-class TurnSnapshot(BaseModel):
+class StageSnapshot(BaseModel):
     """
-    Represents a complete snapshot of a single turn's data.
-    Mô tả một "bức ảnh" hoàn chỉnh về dữ liệu của một lượt chơi, dùng để lưu vào lịch sử.
+    Represents a complete snapshot of a single stage's data.
+    Mô tả một "bức ảnh" hoàn chỉnh về dữ liệu của một giai đoạn, dùng để lưu vào lịch sử.
     """
-    turn_number: int = Field(..., gt=0, description="The sequential number of the turn (1, 2, ...).")
+    stage_number: int = Field(..., gt=0, description="The sequential number of the stage (1, 2, 3, 4).")
     stage_name: str = Field(..., description="The name of the current growth stage, e.g., 'Gieo mạ'.")
-    player_action: PlayerAction = Field(..., description="The action taken by the player in this turn.")
-    weather_conditions: Dict[str, Any] = Field(..., description="Weather data used for calculations in this turn.")
-    turn_result: TurnResult = Field(..., description="The calculated results for this turn.")
-    cumulative_state: CumulativeState = Field(..., description="The cumulative state of the game after this turn.")
+    player_action: PlayerAction = Field(..., description="The action taken by the player in this stage.")
+    weather_conditions: Dict[str, Any] = Field(..., description="Weather data used for calculations in this stage.")
+    stage_result: StageResult = Field(..., description="The calculated results for this stage.")
+    cumulative_state: CumulativeState = Field(..., description="The cumulative state of the game after this stage.")
 
 
 # --- Main Schema ---
@@ -77,7 +60,7 @@ class GameSession(BaseModel):
     This is the main document that will be stored in the MongoDB collection.
     Mô tả toàn bộ một ván chơi. Đây là document chính sẽ được lưu trong collection của MongoDB.
     """
-    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    id: str = Field(..., alias="_id")
     player_name: str = Field(default="Anonymous", description="Player's name (optional).")
     
     start_time: datetime = Field(default_factory=datetime.utcnow, description="Timestamp when the game started.")
@@ -86,31 +69,41 @@ class GameSession(BaseModel):
     status: str = Field(default="in_progress", description="Current status of the game: 'in_progress', 'completed', 'failed'.")
     
     season_key: str = Field(..., description="The key for the chosen season, e.g., 'dong-xuan'.")
-    weather_data: List[Dict[str, Any]] = Field(..., description="The full weather dataset for the entire season, fetched once at the start.")
+    weather_data: Dict[str, Any] = Field(..., description="The full weather dataset for the entire season, fetched once at the start.")
 
-    game_history: List[TurnSnapshot] = Field(default=[], description="A list of snapshots for each completed turn.")
+    water_regime: str = Field(default="traditional_technique", description="Current status of the game: 'traditional_technique', 'awd', ...")
+
+    game_history: List[StageSnapshot] = Field(default=[], description="A list of snapshots for each completed turn.")
     
     final_metrics: Optional[Dict[str, Any]] = Field(None, description="Final calculated score and metrics upon game completion.")
 
     class Config:
         """ Pydantic configuration. """
-        allow_population_by_field_name = True
+        validate_by_name = True
         arbitrary_types_allowed = True # Needed for PyObjectId
         json_encoders = {
             datetime: lambda dt: dt.isoformat(),
             ObjectId: str
         }
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "_id": "64f8e...",
                 "player_name": "Pro Farmer",
                 "start_time": "2025-10-26T10:00:00Z",
                 "status": "in_progress",
                 "season_key": "dong-xuan",
-                "weather_data": [{"T2M": 30.1, "PRECTOTCORR": 5.2}, {"T2M": 31.2, "PRECTOTCORR": 0.0}, "..."],
+                "weather_data": {"1": {"T2M": 30.1, "PRECTOTCORR": 5.2}, "2": {"T2M": 31.2, "PRECTOTCORR": 0.0}},
                 "game_history": [
                     {
                         "turn_number": 1,
+                        "stage_name": "Gieo mạ",
+                        "player_action": {"action_type": "LÀM ĐẤT", "params": {}},
+                        "weather_conditions": {"avg_temp": 30.5},
+                        "turn_result": {"ch4_emitted": 2.5, "n2o_emitted": 0, "biomass_growth": 50.0},
+                        "cumulative_state": {"cumulative_biomass": 50.0}
+                    },
+                    {
+                        "turn_number": 2,
                         "stage_name": "Gieo mạ",
                         "player_action": {"action_type": "LÀM ĐẤT", "params": {}},
                         "weather_conditions": {"avg_temp": 30.5},

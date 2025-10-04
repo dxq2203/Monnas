@@ -19,6 +19,7 @@ def create_game_session(
     """
     Create a new game session.
     """
+    # import pdb; pdb.set_trace()
     return GameSessionService(db).create_game_session(game_session=game_session)
 
 @router.get("/", response_model=GameSessionList)

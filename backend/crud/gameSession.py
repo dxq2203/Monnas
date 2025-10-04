@@ -5,6 +5,7 @@ from services.main import AppCRUD # Giả sử AppCRUD được định nghĩa �
 from models.gameSession import GameSessionModel
 from pydantic import ValidationError
 from models.main import ObjectId
+from config import GAME_CONFIG 
 
 class GameSessionCRUD(AppCRUD):
     def create_game_session(self, game_session: GameSessionCreate) -> GameSessionInDB:
@@ -30,7 +31,6 @@ class GameSessionCRUD(AppCRUD):
     def get_all_game_sessions(self) -> List[GameSessionInDB]:
         COLLECTION_NAME = GameSessionModel.Config.collection_name
         sessions = list(self.db[COLLECTION_NAME].find())
-
         return [GameSessionInDB(**session) for session in sessions]
     
     

@@ -8,16 +8,15 @@ class PlayerActionBase(BaseModel):
     Represents a single action taken by the player in a stage.
     Mô tả một hành động duy nhất mà người chơi thực hiện trong một giai đoạn.
     """
-    action_type: str = Field(..., description="The type of action, e.g., 'BÓN PHÂN', 'TƯỚI NƯỚC'.")
-    params: Dict[str, Any] = Field(..., description="Parameters for the action, e.g., {'fertilizerType': 'urea', 'amountKg': 100}.")
+    player_action: Dict[str, Any] = Field(..., description="The player's action, e.g., 'BÓN PHÂN', 'TƯỚI NƯỚC' and its parameters.")
 
 class StageResult(BaseModel):
     """
     Represents the calculated outcomes of a single stage.
     Mô tả kết quả được tính toán của một giai đoạn. Các giá trị này là *phát sinh trong giai đoạn*.
     """
-    ch4_emitted: float = Field(..., description="Methane (CH4) emitted in this stage (kg).")
-    n2o_emitted: float = Field(..., description="Nitrous Oxide (N2O) emitted in this stage (kg).")
+    ch4_emission: float = Field(..., description="Methane (CH4) emitted in this stage (kg).")
+    n2o_emission: float = Field(..., description="Nitrous Oxide (N2O) emitted in this stage (kg).")
 
 class CumulativeState(BaseModel):
     """
@@ -26,7 +25,7 @@ class CumulativeState(BaseModel):
     """
     cumulative_ch4_emission: float = Field(..., description="Total CH4 emission so far (kg).")
     cumulative_n2o_emission: float = Field(..., description="Total N2O emission so far (kg).")
-    cumulative_emission: float = Field(..., description="Total biomass accumulated so far (kg/ha).")
+    cumulative_emission: float = Field(..., description="Total GHG emission so far (kg CO2e).")
 
 class StageSnapshot(BaseModel):
     """
