@@ -5,15 +5,19 @@ from services.main import AppCRUD # Giả sử AppCRUD được định nghĩa �
 from models.gameSession import GameSessionModel
 from pydantic import ValidationError
 from models.main import ObjectId
+from config import GAME_CONFIG 
 
 class GameSessionCRUD(AppCRUD):
     def create_game_session(self, game_session: GameSessionCreate) -> GameSessionInDB:
         # Chuyển đổi model create thành một dictionary để insert
         new_game_session_data = game_session.dict()
-        
+        print('New game session data to insert: ', new_game_session_data)
+        weather_data = GAME_CONFIG['weather_data'][new_game_session_data['season_key']]
+        print('Weather data for season:', weather_data)
         # Thêm các trường mặc định nếu cần
         new_game_session_data.update({
             "end_time": None,
+            "weather_data": weather_data, 
             "game_history": [],
             "final_metrics": None
         })

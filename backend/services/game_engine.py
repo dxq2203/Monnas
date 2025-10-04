@@ -259,6 +259,17 @@ class GameEngine:
 
         Args:
             synthetic_fertilizer_types (dict): Dictionary of synthetic fertilizer types and their amounts
+
+            There are 9 types of synthetic fertilizers:
+                - Type 1: Urea
+                - Type 2: Diammonium phosphate
+                - Type 3: Ammonium sulphate
+                - Type 4: Ammonium chloride
+                - Type 5: Ammonium nitrate
+                - Type 6: Superphosphate 
+                - Type 7: Kali
+                - Type 8: NPK in stage 2 (NPK_de_nhanh)
+                - Type 9: NPK in stage 3 (NPK_lam_rong)
         
         Returns:
             float: N2O emission for rice (kg N2O/ha)
@@ -338,7 +349,9 @@ class GameEngine:
             organic_fertilizer_types, time, area, weather_data 
         )
 
-        curr_stage_n2o_emission = 36 
+        curr_stage_n2o_emission = self._calculate_n2o_emission(
+
+        )
 
         return StageResult(
             ch4_emission = curr_stage_ch4_emission,

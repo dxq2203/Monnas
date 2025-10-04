@@ -69,7 +69,9 @@ class GameSession(BaseModel):
     status: str = Field(default="in_progress", description="Current status of the game: 'in_progress', 'completed', 'failed'.")
     
     season_key: str = Field(..., description="The key for the chosen season, e.g., 'dong-xuan'.")
-    weather_data: List[Dict[str, Any]] = Field(..., description="The full weather dataset for the entire season, fetched once at the start.")
+    weather_data: Dict[str, Any] = Field(..., description="The full weather dataset for the entire season, fetched once at the start.")
+
+    water_regime: str = Field(default="traditional_technique", description="Current status of the game: 'traditional_technique', 'awd', ...")
 
     game_history: List[StageSnapshot] = Field(default=[], description="A list of snapshots for each completed turn.")
     
@@ -90,7 +92,7 @@ class GameSession(BaseModel):
                 "start_time": "2025-10-26T10:00:00Z",
                 "status": "in_progress",
                 "season_key": "dong-xuan",
-                "weather_data": [{"T2M": 30.1, "PRECTOTCORR": 5.2}, {"T2M": 31.2, "PRECTOTCORR": 0.0}, "..."],
+                "weather_data": {"1": {"T2M": 30.1, "PRECTOTCORR": 5.2}, "2": {"T2M": 31.2, "PRECTOTCORR": 0.0}},
                 "game_history": [
                     {
                         "turn_number": 1,
