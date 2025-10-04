@@ -23,7 +23,7 @@ class PlayerActionCRUD(AppCRUD):
 
     def get_all(self) -> List[PlayerActionInDB]:
         """Lấy tất cả các action."""
-        actions_cursor = self.db[COLLECTION_NAME].find()
+        actions_cursor = list(self.db[COLLECTION_NAME].find())
         return [PlayerActionInDB.parse_obj(action) for action in actions_cursor]
 
     def update(self, action_id: str, action_update: PlayerActionUpdate) -> Optional[PlayerActionInDB]:

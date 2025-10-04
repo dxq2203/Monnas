@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 # from db.db import get_database
 from db.db import get_db as get_database
-from schemas.gameSession import GameSessionCreate, GameSessionInDB, GameSessionList, GameSession, StageSnapshotCreate
+from schemas.gameSession import GameSessionCreate, GameSessionInDB, GameSessionList, GameSession, StageSnapshotCreate, PlayerActionCreate
 from services.gameSession import GameSessionService
 from pymongo.database import Database
 from typing import List
@@ -31,6 +31,33 @@ def read_game_sessions(
     """
     sessions = GameSessionService(db).get_all_game_sessions()
     return {"game_sessions": sessions}
+
+@router.get("/{session_id}", response_model=GameSession)
+def get_game_session_by_id(
+    session_id: str,
+    db: get_database = Depends()
+):
+    """
+    Lấy thông tin chi tiết của một phiên game bằng ID của nó.
+    """
+    game_session = GameSessionService(db).get_session_by_id(session_id)
+    return game_session
+
+@router.post("/{session_id}/play-turn", response_model=GameSession)
+def play_game_turn(
+    session_id: str,
+    player_action: PlayerActionCreate,
+    db: get_database = Depends()
+):
+    """
+    Thực hiện một lượt chơi cho giai đoạn hiện tại.
+    
+    Gửi hành động của người chơi. Backend sẽ tính toán kết quả,
+    cập nhật trạng thái game và trả về session mới.
+    """
+    service = GameSessionService(db)
+    updated_session = service.play_turn(session_id, player_action)
+    return updated_session
 
 @router.post("/{session_id}/history", response_model=GameSession, status_code=status.HTTP_201_CREATED)
 def add_new_turn_to_session(
@@ -66,3 +93,5 @@ def remove_turn_from_session(
     Xóa một lượt chơi khỏi lịch sử của một game session.
     """
     return GameSessionService(db).remove_turn(session_id, turn_number)
+
+

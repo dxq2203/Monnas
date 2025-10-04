@@ -141,7 +141,7 @@ class PlayerAction(PlayerActionInDB):
 class StageSnapshotCreate(StageSnapshot):
     stage_number: int
     stage_name: str
-    player_action: PlayerAction
+    player_action: PlayerActionBase
     weather_conditions: Dict[str, Any]
 
 
