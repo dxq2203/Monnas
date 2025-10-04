@@ -25,9 +25,44 @@ class GameSessionCRUD(AppCRUD):
     def get_all_game_sessions(self) -> List[GameSessionInDB]:
         COLLECTION_NAME = GameSessionModel.Config.collection_name
         sessions = list(self.db[COLLECTION_NAME].find())
-        for session in sessions:
-            print("crud session", session)
         return [GameSessionInDB(**session) for session in sessions]
+    
+    
+    def get_by_id(self, session_id: str) -> Optional[GameSessionInDB]:
+        """
+        Lấy một game session bằng ID của nó.
+        Trả về None nếu không tìm thấy.
+        """
+        COLLECTION_NAME = GameSessionModel.Config.collection_name
+        
+        session_doc = self.db[COLLECTION_NAME].find_one({"_id": ObjectId(session_id)})
+        
+        if session_doc:
+            return GameSessionInDB.parse_obj(session_doc)
+            
+        return None
+    
+    def update_session(self, session: GameSession) -> GameSessionInDB:
+        """
+        Cập nhật toàn bộ document game session sau khi đã được xử lý bởi Game Engine.
+        Sử dụng replace_one để thay thế toàn bộ document.
+        """
+        COLLECTION_NAME = GameSessionModel.Config.collection_name
+        
+        # make sure _id be used
+        session_data = session.dict(by_alias=True)
+
+        result = self.db[COLLECTION_NAME].replace_one(
+            {"_id": ObjectId(session.id)}, 
+            session_data
+        )
+
+        updated_doc = self.db[COLLECTION_NAME].find_one({"_id": ObjectId(session.id)})
+        
+        if updated_doc:
+            return GameSessionInDB.parse_obj(updated_doc)
+        
+        return None 
     
     def add_turn_to_history(self, session_id: str, turn: StageSnapshot) -> GameSessionInDB:
         """
@@ -46,8 +81,6 @@ class GameSessionCRUD(AppCRUD):
         Cập nhật một turn cụ thể trong mảng game_history.
         Sử dụng toán tử $set và arrayFilters.
         """
-        # Tạo một dictionary để set các giá trị mới
-        # Ví dụ: { "game_history.$[turn].stage_name": "new_stage_name" }
         update_fields = {f"game_history.$[turn].{key}": value for key, value in turn_update_data.items()}
 
         result = self.db["gameSession"].find_one_and_update(
@@ -70,20 +103,3 @@ class GameSessionCRUD(AppCRUD):
         )
         return GameSessionInDB.parse_obj(result)
     
-    def get_by_id(self, session_id: str) -> Optional[GameSessionInDB]:
-        """
-        Lấy một game session bằng ID của nó.
-        Trả về None nếu không tìm thấy.
-        """
-        COLLECTION_NAME = GameSessionModel.Config.collection_name
-        
-        # MongoDB lưu _id dưới dạng ObjectId, không phải chuỗi (string)
-        # Vì vậy, chúng ta cần chuyển đổi chuỗi ID nhận được thành ObjectId
-        session_doc = self.db[COLLECTION_NAME].find_one({"_id": ObjectId(session_id)})
-        
-        if session_doc:
-            # Nếu tìm thấy, parse nó thành Pydantic model và trả về
-            return GameSessionInDB.parse_obj(session_doc)
-            
-        # Nếu không tìm thấy, trả về None
-        return None
