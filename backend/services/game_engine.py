@@ -50,13 +50,15 @@ class GameEngine:
         self.seasons = GAME_CONFIG['seasons']
         self.current_stage = len(session.game_history) + 1
 
-    def _calculate_sf_w(self, season_key, water_regime, weather_data, stage_num):
+    def _calculate_sf_w(self, water_regime, weather_data, stage_num, F):
         """
         Calculate scaling factor for water regime (SF_w)
 
         Args:
-            season_key (str): The key for the chosen season, e.g., 'dong-xuan'.
             water_regime (str): The water regime chosen by the player, e.g., 'traditional technique', 'AWD', 'Regular rainfed'.
+            weather_data (dict): Dictionary containing weather data for the current stage
+            stage_num (int): The current stage number (1, 2, 3, or 4)
+            F (float): The level of flooding
 
         Returns:
             float: Scaling factor for water regime (SF_w)
@@ -176,10 +178,9 @@ class GameEngine:
             }
         }
 
-        # mock data 
-        F = 5 # in range 0-15
+        print(weather_data)
 
-        SF_w = a[stage_num][water_regime] * math.exp(b[stage_num][water_regime] * weather_data['avg_temp']) * (1 + c[stage_num][water_regime] * weather_data['total_rainfall']) * (1 / (1 + math.exp(-d[stage_num][water_regime] * weather_data['avg_humidity']))) * (1 / (1 + math.exp(-e[stage_num][water_regime] * F)))         
+        SF_w = a[stage_num][water_regime] * math.exp(b[stage_num][water_regime] * weather_data['avg_temp_c']) * (1 + c[stage_num][water_regime] * weather_data['total_rainfall_mm']) * (1 / (1 + math.exp(-d[stage_num][water_regime] * weather_data['avg_humidity_percent']))) * (1 / (1 + math.exp(-e[stage_num][water_regime] * F)))         
 
         return SF_w
 
@@ -218,7 +219,7 @@ class GameEngine:
 
         return SF_o 
 
-    def _calculate_ch4_emission(self, season_key, weather_data, water_regime, organic_fertilizer_types, time, area = 1.0):
+    def _calculate_ch4_emission(self, weather_data, water_regime, organic_fertilizer_types, F, time, area = 1.0):
         """
         Calculate CH4 emission for rice based on IPCC formula (kg CH4/ha)
 
@@ -229,13 +230,13 @@ class GameEngine:
 
         # Emission factor baseline for continuously flooded rice fields without organic at Southeast Asia
         EF_c = {
-            "dong_xuan": 1.95,
-            "he_thu": 1.83,
-            "thu_dong": 2.20,
+            "dong-xuan": 1.95,
+            "he-thu": 1.83,
+            "thu-dong": 2.20,
         } # kg CH4/ha/day
 
         # Scaling factor for water regime during cultivation period
-        SF_w = self._calculate_sf_w(season_key, water_regime, weather_data)
+        SF_w = self._calculate_sf_w(water_regime, weather_data, self.current_stage, F)
 
         # Scaling factor for water regime pre-cultivation period
         SF_p = 1.0 # any default value
@@ -249,11 +250,11 @@ class GameEngine:
         # Scaling factor for rice cultivar 
         SF_r = 1.0 # default value 
 
-        ch4_emission = EF_c * SF_w * SF_p * SF_o * SF_s * SF_r * time * area
+        ch4_emission = EF_c[self.session.season_key] * SF_w * SF_p * SF_o * SF_s * SF_r * time * area
         
         return ch4_emission
     
-    def _calculate_n2o_emission(self, season_key, synthetic_fertilizer_types):
+    def _calculate_n2o_emission(self, synthetic_fertilizer_types):
         """
         Calculate N2O emission for rice based on IPCC formula (kg N2O/ha)
 
@@ -288,12 +289,12 @@ class GameEngine:
         }
 
         EF_1i = {
-            "dong_xuan": 0.15,
-            "he_thu": 0.2,
-            "thu_dong": 0.17,
+            "dong-xuan": 0.15,
+            "he-thu": 0.2,
+            "thu-dong": 0.17,
         }
 
-        F_CR = 20 # kg/ha - mock data 
+        F_CR = 24.57 # kg/ha - default value   
 
         EF_1 = 0.01 
 
@@ -304,7 +305,7 @@ class GameEngine:
                 F_sn_i = fert_amount * F_SN[fert_type]
                 n2o_emission += F_sn_i
 
-        n2o_emission = n2o_emission * EF_1i[season_key] + F_CR * EF_1
+        n2o_emission = n2o_emission * EF_1i[self.session.season_key] + F_CR * EF_1
 
         return n2o_emission
     
@@ -315,8 +316,9 @@ class GameEngine:
         # The first stage 
         if not self.session.game_history:
             return CumulativeState(
-                cumualative_ch4_emission=0.0,
-                cumulative_n2o_emission=0.0
+                cumulative_ch4_emission=0.0,
+                cumulative_n2o_emission=0.0,
+                cumulative_emission=0.0
             )
         
         # Other stages (2nd, 3rd, ...)
@@ -334,23 +336,31 @@ class GameEngine:
         Returns:
             StageResult: The calculated results for this stage.
         """ 
-        # Mock-up calculations for demonstration purposes
-        # this information will be extracted from player_action and weather_data in a real implementation
-        organic_fertilizer_types={ 
-            "Straw_short": 50,
-            "Compost": 36
-        }
+        # Parse player actions
+        if not player_action:
+            raise GameEngineError("Player action is required to calculate stage results.")
+        
+        player_action = player_action.dict()
+        
+        player_action_type = player_action['player_action']
 
-        time = 32 # days
+        if not player_action_type['fertilization']:
+            raise GameEngineError("Fertilization action is required.")
+        
+        organic_fertilizer_types = player_action_type['fertilization']['organic_fertilizer']
+        synthetic_fertilizer_types = player_action_type['fertilization']['synthetic_fertilizer']
+        irrigation = player_action_type['irrigation'] 
 
-        area = 2.5 # hectares
+        time = 28 # days
+
+        area = 1 # hectares
 
         curr_stage_ch4_emission = self._calculate_ch4_emission(
-            organic_fertilizer_types, time, area, weather_data 
+            weather_data, self.session.water_regime, organic_fertilizer_types, irrigation['level'], time, area
         )
 
         curr_stage_n2o_emission = self._calculate_n2o_emission(
-
+            synthetic_fertilizer_types
         )
 
         return StageResult(
