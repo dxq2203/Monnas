@@ -11,9 +11,14 @@ class GameSessionCRUD(AppCRUD):
         # Chuyển đổi model create thành một dictionary để insert
         new_game_session_data = game_session.dict()
         
+        # weather_data = self.db['weather_data'][new_game_session_data['season_key']]
+        weather_data = self.db["weather_data"].find_one({"season_key": game_session.season_key})
+        weather_data.pop("_id", None)
+        weather_data.pop("season_key", None)
         # Thêm các trường mặc định nếu cần
         new_game_session_data.update({
             "end_time": None,
+            "weather_data": weather_data,
             "game_history": [],
             "final_metrics": None
         })
@@ -29,6 +34,19 @@ class GameSessionCRUD(AppCRUD):
         return [GameSessionInDB(**session) for session in sessions]
     
     
+    # def get_by_id(self, session_id: str) -> Optional[GameSessionInDB]:
+    #     """
+    #     Lấy một game session bằng ID của nó.
+    #     Trả về None nếu không tìm thấy.
+    #     """
+    #     COLLECTION_NAME = GameSessionModel.Config.collection_name
+        
+    #     session_doc = self.db[COLLECTION_NAME].find_one({"_id": ObjectId(session_id)})
+        
+    #     if session_doc:
+    #         return GameSessionInDB.parse_obj(session_doc)
+            
+    #     return None
     def get_by_id(self, session_id: str) -> Optional[GameSessionInDB]:
         """
         Lấy một game session bằng ID của nó.
@@ -40,6 +58,7 @@ class GameSessionCRUD(AppCRUD):
         
         if session_doc:
             return GameSessionInDB.parse_obj(session_doc)
+            # return GameSessionInDB(**session_doc)
             
         return None
     
@@ -65,41 +84,41 @@ class GameSessionCRUD(AppCRUD):
         
         return None 
     
-    def add_turn_to_history(self, session_id: str, turn: StageSnapshot) -> GameSessionInDB:
+    def add_stage_to_history(self, session_id: str, stage: StageSnapshot) -> GameSessionInDB:
         """
-        Thêm một TurnSnapshot vào mảng game_history của một GameSession.
+        Thêm một StageSnapshot vào mảng game_history của một GameSession.
         Sử dụng toán tử $push của MongoDB.
         """
         result = self.db["gameSession"].find_one_and_update(
             {"_id": ObjectId(session_id)},
-            {"$push": {"game_history": turn.dict()}},
+            {"$push": {"game_history": stage.dict()}},
             return_document=True # Trả về document sau khi đã update
         )
         return GameSessionInDB.parse_obj(result)
 
-    def update_turn_in_history(self, session_id: str, turn_number: int, turn_update_data: dict) -> GameSessionInDB:
+    def update_stage_in_history(self, session_id: str, stage_number: int, stage_update_data: dict) -> GameSessionInDB:
         """
-        Cập nhật một turn cụ thể trong mảng game_history.
+        Cập nhật một stage cụ thể trong mảng game_history.
         Sử dụng toán tử $set và arrayFilters.
         """
-        update_fields = {f"game_history.$[turn].{key}": value for key, value in turn_update_data.items()}
+        update_fields = {f"game_history.$[stage].{key}": value for key, value in stage_update_data.items()}
 
         result = self.db["gameSession"].find_one_and_update(
             {"_id": ObjectId(session_id)},
             {"$set": update_fields},
-            array_filters=[{"turn.turn_number": turn_number}],
+            array_filters=[{"stage.stage_number": stage_number}],
             return_document=True
         )
         return GameSessionInDB.parse_obj(result)
         
-    def remove_turn_from_history(self, session_id: str, turn_number: int) -> GameSessionInDB:
+    def remove_stage_from_history(self, session_id: str, stage_number: int) -> GameSessionInDB:
         """
-        Xóa một turn khỏi mảng game_history.
+        Xóa một stage khỏi mảng game_history.
         Sử dụng toán tử $pull của MongoDB.
         """
         result = self.db["gameSession"].find_one_and_update(
             {"_id": ObjectId(session_id)},
-            {"$pull": {"game_history": {"turn_number": turn_number}}},
+            {"$pull": {"game_history": {"stage_number": stage_number}}},
             return_document=True
         )
         return GameSessionInDB.parse_obj(result)

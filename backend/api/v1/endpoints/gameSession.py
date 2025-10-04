@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends
-# from db.db import get_database
 from db.db import get_db as get_database
-from schemas.gameSession import GameSessionCreate, GameSessionInDB, GameSessionList, GameSession, StageSnapshotCreate, PlayerActionCreate
+from schemas.gameSession import GameSessionCreate, GameSessionInDB, GameSessionList, GameSession, StageSnapshotCreate, PlayerActionCreate, PlayerActionsCreate
 from services.gameSession import GameSessionService
 from pymongo.database import Database
 from typing import List
@@ -29,7 +28,6 @@ def read_game_sessions(
     """
     Retrieve all game sessions.
     """
-    import pdb; pdb.set_trace()
     sessions = GameSessionService(db).get_all_game_sessions()
     return {"game_sessions": sessions}
 
@@ -56,9 +54,26 @@ def play_game_stage(
     Gửi hành động của người chơi. Backend sẽ tính toán kết quả,
     cập nhật trạng thái game và trả về session mới.
     """
-    
     service = GameSessionService(db)
     updated_session = service.play_stage(session_id, player_action)
+    return updated_session
+
+
+@router.post("/{session_id}/play-stages", response_model=GameSession)
+def play_game_stage(
+    session_id: str,
+    player_action: PlayerActionsCreate,
+    db: get_database = Depends()
+):
+    """
+    Thực hiện một lượt chơi cho giai đoạn hiện tại.
+    
+    Gửi hành động của người chơi. Backend sẽ tính toán kết quả,
+    cập nhật trạng thái game và trả về session mới.
+    """
+    # import pdb; pdb.set_trace()
+    service = GameSessionService(db)
+    updated_session = service.play_structured_stage(session_id, player_action)
     return updated_session
 
 @router.post("/{session_id}/history", response_model=GameSession, status_code=status.HTTP_201_CREATED)
@@ -76,7 +91,7 @@ def add_new_stage_to_session(
 def update_existing_stage(
     session_id: str,
     stage_number: int,
-    stage_update: dict, # Nhận một dict linh hoạt
+    stage_update: dict, 
     db: get_database = Depends()
 ):
     """

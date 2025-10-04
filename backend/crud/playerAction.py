@@ -28,17 +28,15 @@ class PlayerActionCRUD(AppCRUD):
 
     def update(self, action_id: str, action_update: PlayerActionUpdate) -> Optional[PlayerActionInDB]:
         """Cập nhật một action."""
-        # exclude_unset=True rất quan trọng: chỉ cập nhật những trường được gửi lên
         update_data = action_update.dict(exclude_unset=True)
         
         if not update_data:
-            # Nếu không có gì để cập nhật, trả về action hiện tại
             return self.get_by_id(action_id)
 
         result = self.db[COLLECTION_NAME].find_one_and_update(
             {"_id": ObjectId(action_id)},
             {"$set": update_data},
-            return_document=True # Trả về document sau khi đã update
+            return_document=True 
         )
         if result:
             return PlayerActionInDB.parse_obj(result)

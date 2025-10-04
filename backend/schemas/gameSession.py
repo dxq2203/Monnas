@@ -1,8 +1,7 @@
 from pydantic import BaseModel, UUID4, Field
 from datetime import datetime
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 from models.main import PyObjectId, ObjectId
-
 
 class PlayerActionBase(BaseModel):
     """
@@ -19,23 +18,22 @@ class StageResult(BaseModel):
     """
     ch4_emitted: float = Field(..., description="Methane (CH4) emitted in this stage (kg).")
     n2o_emitted: float = Field(..., description="Nitrous Oxide (N2O) emitted in this stage (kg).")
-    biomass_growth: float = Field(..., description="Biomass gained in this stage (kg/ha).")
 
 class CumulativeState(BaseModel):
     """
     Represents the cumulative state of the game up to the end of a stage.
     Mô tả trạng thái tích lũy của game tính đến cuối một lượt.
     """
-    cumualative_ch4_emission: float = Field(..., description="Total CH4 emission so far (kg).")
+    cumulative_ch4_emission: float = Field(..., description="Total CH4 emission so far (kg).")
     cumulative_n2o_emission: float = Field(..., description="Total N2O emission so far (kg).")
-    cumulative_biomass: float = Field(..., description="Total biomass accumulated so far (kg/ha).")
+    cumulative_emission: float = Field(..., description="Total biomass accumulated so far (kg/ha).")
 
 class StageSnapshot(BaseModel):
     """
     Represents a complete snapshot of a single stage's data.
     Mô tả một "bức ảnh" hoàn chỉnh về dữ liệu của một giai đoạn, dùng để lưu vào lịch sử.
     """
-    stage_number: int = Field(..., gt=0, description="The sequential number of the stage (1, 2, 3, 4).")
+    stage_number: int = Field(...,  description="The sequential number of the stage (1, 2, 3, 4).")
     stage_name: str
     player_action: PlayerActionBase = Field(..., description="The action taken by the player in this stage.")
     weather_conditions: Dict[str, Any] = Field(..., description="Weather data used for calculations in this stage.")
@@ -55,6 +53,7 @@ class GameSessionBase(BaseModel):
     end_time: Optional[datetime] = Field(None, description="Timestamp when the game ended.")
     status: str = Field(default="in_progress", description="Current status of the game: 'in_progress', 'completed', 'failed'.")
     season_key: str = Field(default="dong-xuan", description="The key for the chosen season, e.g., 'dong-xuan'.")
+    weather_data: Dict[str, Any] = Field(..., description="The full weather dataset for the entire season, fetched once at the start.")
     water_regime: str = Field(default="traditional_technique", description="Current status of the game: 'traditional_technique', 'awd', ...")     
     game_history: List[StageSnapshot] = Field(default=[], description="A list of snapshots for each completed turn.")
     final_metrics: Optional[Dict[str, Any]] = None
@@ -145,4 +144,40 @@ class StageSnapshotCreate(StageSnapshot):
     player_action: PlayerActionBase
     weather_conditions: Dict[str, Any]
 
+class OrganicFertilizerAction(BaseModel):
+    """Defines the amounts of different organic fertilizers applied, in kg."""
+    compost_kg: Optional[float] = Field(None)
+    straw_short_kg: Optional[float] = Field(None)
+    straw_long_kg: Optional[float] = Field(None)
+    farm_yard_manure_kg: Optional[float] = Field(None)
+    green_manure_kg: Optional[float] = Field(None)
+
+class SyntheticFertilizerAction(BaseModel):
+    """Defines the amounts of different synthetic fertilizers applied, in kg."""
+    urea_kg: Optional[float] = Field(None,  alias="Urea")
+    diammonium_phosphate_kg: Optional[float] = Field(None,  alias="Diammonium_phosphate")
+    ammonium_sulphate_kg: Optional[float] = Field(None,  alias="Ammonium_sulphate")
+    ammonium_chloride_kg: Optional[float] = Field(None,  alias="Ammonium_chloride")
+    ammonium_nitrate_kg: Optional[float] = Field(None,  alias="Ammonium_nitrate")
+    superphosphate_kg: Optional[float] = Field(None,  alias="Superphosphate")
+    kali_kg: Optional[float] = Field(None,  alias="Kali")
+    npk_de_nhanh_kg: Optional[float] = Field(None,  alias="NPK_de_nhanh")
+    npk_lam_rong_kg: Optional[float] = Field(None,  alias="NPK_lam_rong")
+
+class FertilizationAction(BaseModel):
+    """Groups organic and synthetic fertilizer applications."""
+    organic: Optional[OrganicFertilizerAction] = None
+    synthetic: Optional[SyntheticFertilizerAction] = None
+
+class IrrigationAction(BaseModel):
+    """Defines irrigation parameters."""
+    water_level_cm: Optional[float] = Field(None, description="The water level maintained in the field.")
+
+class PlayerActions(BaseModel):
+    """The main container for all possible action groups in a stage."""
+    fertilization: Optional[FertilizationAction] = None
+    irrigation: Optional[IrrigationAction] = None
+
+class PlayerActionsCreate(BaseModel):
+    actions: PlayerActions
 

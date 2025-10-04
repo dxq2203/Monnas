@@ -1,6 +1,6 @@
 from typing import List
 from crud.gameSession import GameSessionCRUD
-from schemas.gameSession import GameSession, GameSessionCreate, GameSessionInDB, StageSnapshotCreate, StageSnapshot, StageResult, CumulativeState, PlayerActionCreate
+from schemas.gameSession import GameSession, GameSessionCreate, GameSessionInDB, StageSnapshotCreate, StageSnapshot, StageResult, CumulativeState, PlayerActionCreate, PlayerActionsCreate
 from services.main import AppService
 from fastapi import HTTPException, status
 from models.main import ObjectId
@@ -55,7 +55,56 @@ class GameSessionService(AppService):
             raise HTTPException(status_code=404, detail="GameSession not found")
         
         if current_session.status == "completed":
-             raise HTTPException(status_code=400, detail="This game has already been completed.")
+            raise HTTPException(status_code=400, detail="This game has already been completed.")
+
+        current_stage_num = len(current_session.game_history) + 1
+        season_key = current_session.season_key 
+
+        weather_doc = self.db["weather_data"].find_one({"season_key": season_key})
+        if not weather_doc or not weather_doc.get("data"):
+            raise HTTPException(status_code=500, detail=f"Weather data for season '{season_key}' not found.")
+        
+        # access weather data
+        try:
+            weather_conditions = weather_doc["data"][current_stage_num - 1]
+        except IndexError:
+             raise HTTPException(status_code=500, detail=f"Weather data for stage {current_stage_num} not found.")
+        print("weather condition", weather_conditions)
+        try:
+            game_engine = GameEngine(session=current_session)
+            
+            updated_session = game_engine.play_stage(
+                player_actions=player_action_data, 
+                weather_data=weather_conditions
+            )
+            
+            saved_session = crud.update_session(updated_session)
+            if not saved_session:
+                raise HTTPException(status_code=500, detail="Failed to save the updated game session.")
+
+            return saved_session
+
+        except GameEngineError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
+    
+    def play_structured_stage(self, session_id: str, player_actions_data: PlayerActionsCreate) -> GameSession:
+        """
+        Processes a game stage using the new structured actions format.
+        """
+        crud = GameSessionCRUD(self.db)
+
+        # Phần logic load session và weather data có thể được tái sử dụng
+        if not ObjectId.is_valid(session_id):
+            raise HTTPException(status_code=400, detail=f"Invalid session ID: {session_id}")
+            
+        current_session = crud.get_by_id(session_id)
+        if not current_session:
+            raise HTTPException(status_code=404, detail="GameSession not found")
+        
+        if current_session.status == "completed":
+            raise HTTPException(status_code=400, detail="This game has already been completed.")
 
         current_stage_num = len(current_session.game_history) + 1
         season_key = current_session.season_key 
@@ -73,24 +122,24 @@ class GameSessionService(AppService):
         try:
             game_engine = GameEngine(session=current_session)
             
-            # play_stage của GameEngine sẽ thực hiện các bước 5, 6, 7, 8
-            updated_session = game_engine.play_stage(
-                player_actions=player_action_data, 
+            # GỌI PHƯƠNG THỨC MỚI CỦA GAME ENGINE
+            updated_session = game_engine.play_structured_stage(
+                player_actions=player_actions_data, 
                 weather_data=weather_conditions
             )
             
+            # Lưu session đã cập nhật (dùng lại hàm crud.update_session)
             saved_session = crud.update_session(updated_session)
             if not saved_session:
                 raise HTTPException(status_code=500, detail="Failed to save the updated game session.")
 
-            # 10. Trả về kết quả
             return saved_session
 
         except GameEngineError as e:
             raise HTTPException(status_code=400, detail=str(e))
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
-        
+
     def add_stage(self, session_id: str, stage_data: StageSnapshotCreate) -> GameSession:
         crud = GameSessionCRUD(self.db)
         
