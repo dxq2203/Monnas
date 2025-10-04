@@ -1,6 +1,6 @@
 from .power import fetch_daily_power_data
-from ..config import GAME_CONFIG
-from ..models import GameSession, PlayerAction, StageResult, StageSnapshot, CumulativeState
+from config.config import GAME_CONFIG
+from schemas.gameSession import GameSession, PlayerAction, StageResult, StageSnapshot, CumulativeState
 import os
 import json
 import math
@@ -240,7 +240,7 @@ class GameEngine:
             n2o_emission = curr_stage_n2o_emission
         )
     
-    def play_turn(self, player_actions: PlayerAction, weather_data: dict) -> GameSession:
+    def play_stage(self, player_actions: PlayerAction, weather_data: dict) -> GameSession:
         """
         Process a single turn of the game. This is the main public method. 
 

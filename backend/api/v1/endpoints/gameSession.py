@@ -29,6 +29,7 @@ def read_game_sessions(
     """
     Retrieve all game sessions.
     """
+    import pdb; pdb.set_trace()
     sessions = GameSessionService(db).get_all_game_sessions()
     return {"game_sessions": sessions}
 
@@ -43,8 +44,8 @@ def get_game_session_by_id(
     game_session = GameSessionService(db).get_session_by_id(session_id)
     return game_session
 
-@router.post("/{session_id}/play-turn", response_model=GameSession)
-def play_game_turn(
+@router.post("/{session_id}/play-stage", response_model=GameSession)
+def play_game_stage(
     session_id: str,
     player_action: PlayerActionCreate,
     db: get_database = Depends()
@@ -55,43 +56,44 @@ def play_game_turn(
     Gửi hành động của người chơi. Backend sẽ tính toán kết quả,
     cập nhật trạng thái game và trả về session mới.
     """
+    
     service = GameSessionService(db)
-    updated_session = service.play_turn(session_id, player_action)
+    updated_session = service.play_stage(session_id, player_action)
     return updated_session
 
 @router.post("/{session_id}/history", response_model=GameSession, status_code=status.HTTP_201_CREATED)
-def add_new_turn_to_session(
+def add_new_stage_to_session(
     session_id: str,
-    turn: StageSnapshotCreate,
+    stage: StageSnapshotCreate,
     db: get_database = Depends()
 ):
     """
-    Thêm một lượt chơi (turn) mới vào lịch sử của một game session.
+    Thêm một lượt chơi (stage) mới vào lịch sử của một game session.
     """
-    return GameSessionService(db).add_turn(session_id, turn)
+    return GameSessionService(db).add_stage(session_id, stage)
 
-@router.patch("/{session_id}/history/{turn_number}", response_model=GameSession)
-def update_existing_turn(
+@router.patch("/{session_id}/history/{stage_number}", response_model=GameSession)
+def update_existing_stage(
     session_id: str,
-    turn_number: int,
-    turn_update: dict, # Nhận một dict linh hoạt
+    stage_number: int,
+    stage_update: dict, # Nhận một dict linh hoạt
     db: get_database = Depends()
 ):
     """
     Cập nhật một lượt chơi đã có trong lịch sử.
     Lưu ý: Chỉ gửi những trường cần thay đổi, ví dụ: { "stage_name": "Làm đòng" }
     """
-    return GameSessionService(db).update_turn(session_id, turn_number, turn_update)
+    return GameSessionService(db).update_stage(session_id, stage_number, stage_update)
 
-@router.delete("/{session_id}/history/{turn_number}", response_model=GameSession)
-def remove_turn_from_session(
+@router.delete("/{session_id}/history/{stage_number}", response_model=GameSession)
+def remove_stage_from_session(
     session_id: str,
-    turn_number: int,
+    stage_number: int,
     db: get_database = Depends()
 ):
     """
     Xóa một lượt chơi khỏi lịch sử của một game session.
     """
-    return GameSessionService(db).remove_turn(session_id, turn_number)
+    return GameSessionService(db).remove_stage(session_id, stage_number)
 
 

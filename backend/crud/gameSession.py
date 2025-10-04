@@ -82,8 +82,6 @@ class GameSessionCRUD(AppCRUD):
         Cập nhật một turn cụ thể trong mảng game_history.
         Sử dụng toán tử $set và arrayFilters.
         """
-        # Tạo một dictionary để set các giá trị mới
-        # Ví dụ: { "game_history.$[turn].stage_name": "new_stage_name" }
         update_fields = {f"game_history.$[turn].{key}": value for key, value in turn_update_data.items()}
 
         result = self.db["gameSession"].find_one_and_update(

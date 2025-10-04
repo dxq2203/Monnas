@@ -54,6 +54,7 @@ class GameSessionBase(BaseModel):
     start_time: datetime = Field(default_factory=datetime.utcnow, description="Timestamp when the game started.")
     end_time: Optional[datetime] = Field(None, description="Timestamp when the game ended.")
     status: str = Field(default="in_progress", description="Current status of the game: 'in_progress', 'completed', 'failed'.")
+    season_key: str = Field(default="dong-xuan", description="The key for the chosen season, e.g., 'dong-xuan'.")
     water_regime: str = Field(default="traditional_technique", description="Current status of the game: 'traditional_technique', 'awd', ...")     
     game_history: List[StageSnapshot] = Field(default=[], description="A list of snapshots for each completed turn.")
     final_metrics: Optional[Dict[str, Any]] = None
