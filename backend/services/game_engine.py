@@ -395,10 +395,10 @@ class GameEngine:
         curr_stage_result = self._calculate_stage_result(player_actions, weather_data, previous_state)
 
         # --- Update cumulative state ---
-        curr_stage_total_emission = curr_stage_result.ch4_emitted * 27 + curr_stage_result.n2o_emitted * 273 # kg CO2e
+        curr_stage_total_emission = curr_stage_result.ch4_emission * 27 + curr_stage_result.n2o_emission * 273 # kg CO2e
         new_cumulative_state = CumulativeState(
-            cumulative_ch4_emission= previous_state.cumulative_ch4_emission + curr_stage_result.ch4_emitted,
-            cumulative_n2o_emission= previous_state.cumulative_n2o_emission + curr_stage_result.n2o_emitted,
+            cumulative_ch4_emission= previous_state.cumulative_ch4_emission + curr_stage_result.ch4_emission,
+            cumulative_n2o_emission= previous_state.cumulative_n2o_emission + curr_stage_result.n2o_emission,
             cumulative_emission= previous_state.cumulative_emission + curr_stage_total_emission
         )
 

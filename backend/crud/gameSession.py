@@ -33,20 +33,6 @@ class GameSessionCRUD(AppCRUD):
         sessions = list(self.db[COLLECTION_NAME].find())
         return [GameSessionInDB(**session) for session in sessions]
     
-    
-    # def get_by_id(self, session_id: str) -> Optional[GameSessionInDB]:
-    #     """
-    #     Lấy một game session bằng ID của nó.
-    #     Trả về None nếu không tìm thấy.
-    #     """
-    #     COLLECTION_NAME = GameSessionModel.Config.collection_name
-        
-    #     session_doc = self.db[COLLECTION_NAME].find_one({"_id": ObjectId(session_id)})
-        
-    #     if session_doc:
-    #         return GameSessionInDB.parse_obj(session_doc)
-            
-    #     return None
     def get_by_id(self, session_id: str) -> Optional[GameSessionInDB]:
         """
         Lấy một game session bằng ID của nó.

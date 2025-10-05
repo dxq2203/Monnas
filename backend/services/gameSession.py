@@ -1,6 +1,6 @@
 from typing import List
 from crud.gameSession import GameSessionCRUD
-from schemas.gameSession import GameSession, GameSessionCreate, GameSessionInDB, StageSnapshotCreate, StageSnapshot, StageResult, CumulativeState, PlayerActionCreate, PlayerActionsCreate
+from schemas.gameSession import GameSession, GameSessionCreate, GameSessionInDB, StageSnapshotCreate, StageSnapshot, StageResult, CumulativeState, PlayerActionCreate
 from services.main import AppService
 from fastapi import HTTPException, status
 from models.main import ObjectId
@@ -39,6 +39,7 @@ class GameSessionService(AppService):
             
         # Nếu tìm thấy, trả về session
         return session
+
     
     def play_stage(self, session_id: str, player_action_data: PlayerActionCreate) -> GameSession:
         """
@@ -89,57 +90,6 @@ class GameSessionService(AppService):
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
     
-    def play_structured_stage(self, session_id: str, player_actions_data: PlayerActionsCreate) -> GameSession:
-        """
-        Processes a game stage using the new structured actions format.
-        """
-        crud = GameSessionCRUD(self.db)
-
-        # Phần logic load session và weather data có thể được tái sử dụng
-        if not ObjectId.is_valid(session_id):
-            raise HTTPException(status_code=400, detail=f"Invalid session ID: {session_id}")
-            
-        current_session = crud.get_by_id(session_id)
-        if not current_session:
-            raise HTTPException(status_code=404, detail="GameSession not found")
-        
-        if current_session.status == "completed":
-            raise HTTPException(status_code=400, detail="This game has already been completed.")
-
-        current_stage_num = len(current_session.game_history) + 1
-        season_key = current_session.season_key 
-
-        weather_doc = self.db["weather_data"].find_one({"season_key": season_key})
-        if not weather_doc or not weather_doc.get("data"):
-            raise HTTPException(status_code=500, detail=f"Weather data for season '{season_key}' not found.")
-        
-        # access weather data
-        try:
-            weather_conditions = weather_doc["data"][current_stage_num - 1]
-        except IndexError:
-             raise HTTPException(status_code=500, detail=f"Weather data for stage {current_stage_num} not found.")
-
-        try:
-            game_engine = GameEngine(session=current_session)
-            
-            # GỌI PHƯƠNG THỨC MỚI CỦA GAME ENGINE
-            updated_session = game_engine.play_structured_stage(
-                player_actions=player_actions_data, 
-                weather_data=weather_conditions
-            )
-            
-            # Lưu session đã cập nhật (dùng lại hàm crud.update_session)
-            saved_session = crud.update_session(updated_session)
-            if not saved_session:
-                raise HTTPException(status_code=500, detail="Failed to save the updated game session.")
-
-            return saved_session
-
-        except GameEngineError as e:
-            raise HTTPException(status_code=400, detail=str(e))
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
-
     def add_stage(self, session_id: str, stage_data: StageSnapshotCreate) -> GameSession:
         crud = GameSessionCRUD(self.db)
         
@@ -149,12 +99,12 @@ class GameSessionService(AppService):
              raise HTTPException(status_code=404, detail="GameSession not found")
 
         # --- LOGIC TÍNH TOÁN CỦA GAME ---
-        ch4_emitted = 2.5 # (Tính toán dựa trên stage_data.player_action)
-        n2o_emitted = 0.1 # (Tính toán)
+        ch4_emission = 2.5 # (Tính toán dựa trên stage_data.player_action)
+        n2o_emission = 0.1 # (Tính toán)
         biomass_growth = 100.0 # (Tính toán)
             
         # Tạo StageResult
-        stage_result = StageResult(ch4_emitted=ch4_emitted, n2o_emitted=n2o_emitted, biomass_growth=biomass_growth)
+        stage_result = StageResult(ch4_emission=ch4_emission, n2o_emission=n2o_emission, biomass_growth=biomass_growth)
 
         # Lấy cumulative state của stage trước
         last_cumulative = CumulativeState(cumualative_ch4_emission=0, cumulative_n2o_emission=0, cumulative_biomass=0)
@@ -163,9 +113,9 @@ class GameSessionService(AppService):
         
         # Tính cumulative state mới
         new_cumulative_state = CumulativeState(
-            cumualative_ch4_emission=last_cumulative.cumualative_ch4_emission + ch4_emitted,
-            cumulative_n2o_emission=last_cumulative.cumulative_n2o_emission + n2o_emitted,
-            cumulative_biomass=last_cumulative.cumulative_biomass + biomass_growth
+            cumualative_ch4_emission=last_cumulative.cumulative_ch4_emission + ch4_emission,
+            cumulative_n2o_emission=last_cumulative.cumulative_n2o_emission + n2o_emission,
+            cumulative_biomass=last_cumulative.cumulative_emission + biomass_growth
         )
 
         # Tạo đối tượng StageSnapshot hoàn chỉnh để lưu vào DB
