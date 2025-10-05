@@ -18,9 +18,9 @@ export default function RiceGameProvider({ children }) {
     const [chartOpen, setChartOpen] = useState(false);
 
     const methods = [
-        { id: 1, name: "Alternate Wetting and Drying (AWD)", key: "AWD" },
-        { id: 2, name: "Traditional method", key: "traditional_technique" },
-        { id: 3, name: "Regular rainfed", key: "regular_rainfed" },
+        { id: 1, name: "Alternate Wetting and Drying (AWD)", key: "AWD", description: "A water-saving technology that involves periodic drying of the rice field during the growing season." },
+        { id: 2, name: "Traditional method", key: "traditional_technique", description: "A conventional method of rice cultivation that relies on continuous flooding." },
+        { id: 3, name: "Regular rainfed", key: "regular_rainfed", description: "A method that depends on rainfall for water supply without any irrigation." },
     ];
 
     const stages = ["Seeding", "Growth", "Flowering", "Harvest"];
@@ -36,6 +36,7 @@ export default function RiceGameProvider({ children }) {
     const weatherData = [
         {
             season: "Winter–Spring",
+            description: "Typically characterized by cooler temperatures and moderate rainfall, making it suitable for early rice cultivation.",
             key: "dong-xuan",
             stages: [
                 {
@@ -78,6 +79,7 @@ export default function RiceGameProvider({ children }) {
         },
         {
             season: "Summer–Autumn",
+            description: "Characterized by higher temperatures and increased rainfall, ideal for the main rice-growing season.",
             key: "he-thu",
             stages: [
                 {
@@ -120,6 +122,7 @@ export default function RiceGameProvider({ children }) {
         },
         {
             season: "Autumn–Winter",
+            description: "Marked by a transition to cooler weather and reduced rainfall, suitable for late rice cultivation.",
             key: "thu-dong",
             stages: [
                 {
@@ -162,9 +165,9 @@ export default function RiceGameProvider({ children }) {
         },
     ];
     const seasons = [
-        { name: "Winter–Spring", time: "Nov 1, 2023 – Feb 20, 2024" },
-        { name: "Summer–Autumn", time: "Apr 15, 2024 – Aug 4, 2024" },
-        { name: "Autumn–Winter", time: "Sep 15, 2024 – Jan 4, 2025" },
+        { name: "Winter–Spring", time: "Nov 1, 2023 – Feb 20, 2024", description: "Typically characterized by cooler temperatures and moderate rainfall, making it suitable for early rice cultivation." },
+        { name: "Summer–Autumn", time: "Apr 15, 2024 – Aug 4, 2024", description: "Characterized by higher temperatures and increased rainfall, ideal for the main rice-growing season." },
+        { name: "Autumn–Winter", time: "Sep 15, 2024 – Jan 4, 2025", description: "Marked by a transition to cooler weather and reduced rainfall, suitable for late rice cultivation." },
     ];
 
     const value = {

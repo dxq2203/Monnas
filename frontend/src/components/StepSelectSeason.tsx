@@ -1,4 +1,4 @@
-import { Box, Grid, Typography } from "@mui/material";
+import { Box, Grid, Typography, Tooltip } from "@mui/material";
 import { useRiceGame } from "./RiceGameContext";
 import { BevelButton } from "@/components/ThemeProvider";
 import { useState } from "react";
@@ -59,14 +59,36 @@ export default function StepSelectSeason() {
                 left: "50%",
                 transform: "translateX(-50%)",
                 height: "30%",
-                width: "50%",
-                overflow: "auto",
+                width: "80%",
+                overflow: "visible",
+                zIndex: 10, 
                 p: 2,
             }}
         >
+            <Typography variant="h4" gutterBottom mb={4} align="center">
+                Choose desired season:
+            </Typography>
             <Grid container spacing={2} justifyContent="center" sx={{ width: "80%" }}>
                 {seasons.map((s, i) => (
                     <Grid key={i} size={4}>
+                        {/* ✅ Tooltip bọc quanh Box */}
+                        <Tooltip
+                            title={
+                                <Box
+                                    sx={{
+                                        backgroundColor: "white",
+                                        color: "black",
+                                        p: 1,
+                                        borderRadius: 1,
+                                        boxShadow: 3,
+                                    }}
+                                >
+                                    {s.description || s.name} {/* hoặc nội dung khác */}
+                                </Box>
+                            }
+                            arrow
+                            placement="bottom"
+                        >
                         <Box
                             className="neumorphic"
                             onClick={() => handleSeasonSelect(s)}
@@ -90,6 +112,7 @@ export default function StepSelectSeason() {
                                 <Typography variant="body2">{s.time}</Typography>
                             </Box>
                         </Box>
+                        </Tooltip>
                     </Grid>
                 ))}
             </Grid>

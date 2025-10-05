@@ -1,4 +1,4 @@
-import { Box, Grid, Typography } from "@mui/material";
+import { Box, Grid, Typography, Tooltip } from "@mui/material"; // ⬅️ thêm Tooltip
 import { useRiceGame } from "./RiceGameContext";
 import { BevelButton, neumorphism } from "@/components/ThemeProvider";
 
@@ -24,25 +24,51 @@ export default function StepSelectMethod() {
             <Grid container spacing={2} justifyContent="center">
                 {methods.map((m, i) => (
                     <Grid key={i} size={4}>
-                        <Box
-                            onClick={() => {
-                                setMethod(m.key);
-                                setStep(1);
-                            }}
-                            sx={{
-                                ...BevelButton,
-                                cursor: "pointer",
-                                "&:hover": { boxShadow: 6 },
-                                height: "100%",
-                                backgroundColor: neumorphism.card,
-                            }}
+                        {/* ✅ Tooltip bọc quanh Box */}
+                        <Tooltip
+                            title={
+                                <Box
+                                    sx={{
+                                        backgroundColor: "white",
+                                        color: "black",
+                                        p: 1,
+                                        borderRadius: 1,
+                                        boxShadow: 3,
+                                    }}
+                                >
+                                    {m.description || m.name} {/* hoặc nội dung khác */}
+                                </Box>
+                            }
+                            arrow
+                            placement="bottom"
                         >
-                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
-                                <Typography variant="h6" align="center">
-                                    {m.name}
-                                </Typography>
+                            <Box
+                                onClick={() => {
+                                    setMethod(m.key);
+                                    setStep(1);
+                                }}
+                                sx={{
+                                    ...BevelButton,
+                                    cursor: "pointer",
+                                    "&:hover": { boxShadow: 6 },
+                                    height: "100%",
+                                    backgroundColor: neumorphism.card,
+                                }}
+                            >
+                                <Box
+                                    sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        height: "100%",
+                                    }}
+                                >
+                                    <Typography variant="h6" align="center">
+                                        {m.name}
+                                    </Typography>
+                                </Box>
                             </Box>
-                        </Box>
+                        </Tooltip>
                     </Grid>
                 ))}
             </Grid>
