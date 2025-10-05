@@ -55,6 +55,10 @@ def play_game_stage(
     Gửi hành động của người chơi. Backend sẽ tính toán kết quả,
     cập nhật trạng thái game và trả về session mới.
     """
+<<<<<<< HEAD
+=======
+    # import pdb; pdb.set_trace()
+>>>>>>> b5ebfa270a795ce8c4efe630ff2a3154d9ef38eb
     service = GameSessionService(db)
     updated_session = service.play_stage(session_id, player_action)
     return updated_session

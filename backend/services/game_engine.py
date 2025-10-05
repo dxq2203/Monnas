@@ -276,6 +276,9 @@ class GameEngine:
             float: N2O emission for rice (kg N2O/ha)
         """
 
+        if not synthetic_fertilizer_types:
+            return 0.0
+
         F_SN = {
             "Urea": 0.46,
             "Diammonium_phosphate": 0.18,
